@@ -1,0 +1,85 @@
+clc;close all;clear;
+
+%% load features and mos
+addpath('Databases');
+addpath('SVR');
+load 'NBU_all_mos';
+load 'LBP_BLiF_NBU.mat';
+
+%%
+c_num = 0;
+lower=-1; upper=1;
+input_NR = [features];
+output = zeros(210,1);
+for i=1:210
+    temp = cell2mat(NBU_all_mos);
+    output(i,:) = str2double(temp(i,:));
+end
+scene_num = 14;
+xulie_num = 1:scene_num; 
+folds_num = 2;
+all_num = factorial(scene_num)/(factorial(scene_num-folds_num)*factorial(folds_num));
+best_plcc = 0;
+best_srocc = 0;
+best_rmse = 0;
+best_i = 0;
+best_j = 0;
+for ii = 1:scene_num-1
+    for jj = 2:scene_num
+        if ii < jj 
+            c_num = c_num + 1;
+            fork_num(c_num,:) = [ii,jj];
+        end
+    end
+end
+for i = 1:14
+    input_code_NR{i,:}=input_NR(((i-1)*15+1):i*15,:);
+    output_code{i,:}=output(((i-1)*15+1):i*15,:);
+end
+
+i = 7;
+j = -7;
+
+for fork=1:all_num
+    test = fork_num(fork,:);
+    train = xulie_num(~ismember(xulie_num,test));
+    %test data
+    for m=1:size(test',1) 
+        input_test_NR(1+15*(m-1):(15*m),:)=input_code_NR{test(m)};
+        output_test(1+15*(m-1):(15*m),:)=output_code{test(m)};
+    end
+    %trainging data
+    for n=1:size(train',1)
+        input_train_NR(1+15*(n-1):(15*n),:)=input_code_NR{train(n)};
+        output_train(1+15*(n-1):(15*n),:)=output_code{train(n)};
+    end        
+   %% normalization
+    [input_train_NR,MAX,MIN]=normalization(input_train_NR,lower,upper);
+    input_test_NR = normalization(input_test_NR,lower,upper,MAX,MIN);
+   %% SVR parameters
+    cost = 2^i;
+    gamma = 2^j;
+    c_str = sprintf('%f',cost);
+    g_str = sprintf('%.2f',gamma);
+    libsvm_options = ['-s 3 -t 2 -g ',g_str,' -c ',c_str];
+    model = svmtrain(output_train,input_train_NR,libsvm_options);
+    [predict_score, ~, ~] = svmpredict(zeros(size(output_test)), input_test_NR, model);
+
+    pearson_cc_NR(fork) = abs(IQAPerformance(predict_score, output_test,'p'));
+    spearman_srocc_NR(fork) = abs(IQAPerformance(predict_score, output_test,'s'));
+    kendall_krocc_NR(fork) = abs(IQAPerformance(predict_score, output_test,'k'));
+    rmse_NR(fork)  = abs(IQAPerformance(predict_score, output_test,'e'));
+end
+
+pearson_plcc_all = mean(abs(pearson_cc_NR));
+spearman_srocc_all = mean(abs(spearman_srocc_NR));
+kendall_krocc_all = mean(abs(kendall_krocc_NR));
+rmse_all = mean(abs(rmse_NR));   
+ 
+fprintf('plcc: %.4f\n',pearson_plcc_all)
+fprintf('srocc: %.4f\n',spearman_srocc_all)
+fprintf('krocc: %.4f\n',kendall_krocc_all)
+fprintf('rmse: %.4f\n',rmse_all)
+
+
+
