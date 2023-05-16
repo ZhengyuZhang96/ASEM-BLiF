@@ -2,7 +2,7 @@
 
 # ASEM-BLiF
 
-Demo code for our new paper, which has been submitted to TBC. More details will be provided after the paper is accpeted.
+Demo code for our new paper, which has been submitted to TBC. More details will be provided after the paper is accepted.
 
 ## Contact
 Welcome to raise issues or email to [zhengyu.zhang@insa-rennes.fr](zhengyu.zhang@insa-rennes.fr) for any question.
